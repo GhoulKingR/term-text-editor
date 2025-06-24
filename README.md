@@ -1,2 +1,2 @@
-# term-text-editor
+# Mini-vim
 A terminal text editor
