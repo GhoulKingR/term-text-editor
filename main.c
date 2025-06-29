@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <termios.h>
@@ -14,7 +15,7 @@ void display_fb(char* text_to_display) {
     int len = strlen(text_to_display);
     int a = 0, b = 0;
     for (int i = 0; i < len; i++) {
-        framebuffer[a][b] = text_to_display[i];
+        framebuffer[b][a] = text_to_display[i];
         
         a++;
         if (a >= width) {
@@ -25,9 +26,18 @@ void display_fb(char* text_to_display) {
 }
 
 void clear_buffer() {
-    for (int i = 0; i < height; i++) {
-        memset(framebuffer[i], '\0', 10000);
-        memset(framebuffer[i], ' ', width);
+    for (int i = 0; i < 1000; i++) {
+        memset(framebuffer[i], '\0', 1000);
+    }
+}
+
+void print_screen() {
+    int i = 0;
+    char *to_print = framebuffer[i];
+    while(strlen(to_print) > 0) {
+        printf("%s\n", to_print);
+        i++;
+        to_print = framebuffer[i];
     }
 }
 
@@ -48,13 +58,20 @@ void handle_width(int sig) {
         memset(to_display, '\0', 100);
         sprintf(to_display, "Terminal resized to: %d rows, %d columns\n", height, width);
         display_fb(to_display);
+        
+        system("clear");
+        print_screen();
     }
 }
 
-void print_screen() {
-    for (int i = 0; i < height; i++) {
-        printf("%s\n", framebuffer[i]);
-    }
+void hide_cursor() {
+    printf("\e[?25l"); // ANSI escape code to hide the cursor
+    fflush(stdout);    // Ensure the output is immediately sent to the terminal
+}
+
+void show_cursor() {
+    printf("\e[?25h"); // ANSI escape code to show the cursor
+    fflush(stdout);    // Ensure the output is immediately sent to the terminal
 }
 
 int main() {
@@ -63,14 +80,11 @@ int main() {
     ioctl(0, TIOCGSIZE, &ts);
     height = ts.ts_lines;
     width = ts.ts_cols;
+
     clear_buffer();
 
     // Register the signal handler for SIGWINCH
     signal(SIGWINCH, handle_width);
-
-    // char clear_txt[10000];
-    // memset(clear_txt, '\b', (width * height) - 1);
-    // clear_txt[(width * height) - 1] = '\0';
 
     // Get current terminal settings
     struct termios old_settings, new_settings;
@@ -79,13 +93,20 @@ int main() {
     new_settings.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &new_settings);
 
+    hide_cursor();
+
     system("clear");
-    printf("\x1b[?1000h\x1b[?1006h"); 
+    printf("\x1b[?1000h\x1b[?1006h");
+
+    char to_display[100];
+    memset(to_display, '\0', 100);
+    sprintf(to_display, "Terminal resized to: %d rows, %d columns\n", height, width);
+    display_fb(to_display);
     print_screen();
 
     int ch;
     while ((ch = getchar()) != '\n' && ch != EOF) {
-        // printf("%s", clear_txt);
+        system("clear");
 
         char to_display[100];
         memset(to_display, '\0', 100);
@@ -95,9 +116,9 @@ int main() {
         print_screen();
     }
 
+    system("clear");
+    show_cursor();
     printf("\x1b[?1000l\x1b[?1006l");
-    // printf("%s", clear_txt);
-
     tcsetattr(STDIN_FILENO, TCSANOW, &old_settings);
 
     return 0;
