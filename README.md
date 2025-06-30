@@ -1,2 +1,2 @@
 # Mini-vim
-A terminal text editor
+A command-line text editor
